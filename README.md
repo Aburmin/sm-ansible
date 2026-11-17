@@ -37,20 +37,6 @@ Alternatively, you may supply the access token as a parameter to the `bitwarden.
 plugin:
 
 <!-- prettier-ignore -->
-```yaml
-- name: A simple example
-  hosts: localhost
-
-  vars_prompt:
-  - name: "your_access_token"
-    prompt: "Enter your Bitwarden access token"
-    private: yes
-
-  vars:
-    some_secret: "{{ lookup('bitwarden.secrets.lookup', '<your_secret_id>', access_token=your_access_token) }}"
-```
-
-<!-- prettier-ignore -->
 > [!Note]\
 > We are using a `vars_prompt` to avoid storing the access token in the playbook. While
 > there are many ways to pass the access token to the lookup plugin, we recommend against storing it
@@ -80,3 +66,49 @@ export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 See
 [running on macos as a control node](https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#running-on-macos-as-a-control-node)
 and [this GitHub issue](https://github.com/ansible/ansible/issues/49207) for more details.
+
+## Querying organizations and listing secrets
+
+List the secrets a machine account can access, optionally filtered by project:
+
+```yaml
+- name: List secret keys for a project
+  ansible.builtin.debug:
+    msg: "{{ lookup('bitwarden.secrets.secrets', organization_id='<your-organization-id>', project_id='<project-id>', field='key') }}"
+```
+
+Query organization details:
+
+```yaml
+- name: Query an organization
+  ansible.builtin.debug:
+    msg: "{{ lookup('bitwarden.secrets.organization', '<your-organization-id>') }}"
+```
+
+## Creating, updating, and deleting secrets
+
+The `bitwarden.secrets.secret` module manages secrets with a machine account access token. It
+supports check mode and will not modify secrets when run with `--check`:
+
+```yaml
+- name: Create or update a secret
+  bitwarden.secrets.secret:
+    state: present
+    key: api_key
+    value: "{{ api_key }}"
+    note: "Managed by Ansible"
+    project_id: "{{ project_id }}"
+
+- name: Update an existing secret by ID
+  bitwarden.secrets.secret:
+    state: present
+    secret_id: "{{ secret_id }}"
+    value: "{{ new_value }}"
+
+- name: Delete a secret by ID
+  bitwarden.secrets.secret:
+    state: absent
+    secret_id: "{{ secret_id }}"
+```
+
+See `examples/manage_secrets.yml` for a complete example.
